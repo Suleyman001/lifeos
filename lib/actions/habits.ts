@@ -141,3 +141,22 @@ export async function createHabit(data: {
   revalidatePath("/");
   return { success: true, habit: newHabit };
 }
+
+export async function toggleHabitLog(habitId: string, targetDateStr?: string) {
+  const dateStr = targetDateStr || new Date().toISOString().split("T")[0];
+  const date = new Date(dateStr);
+
+  const existingLog = await prisma.habitLog.findUnique({
+    where: { habitId_date: { habitId, date } },
+  });
+
+  const willBeCompleted = !existingLog || !existingLog.completed;
+  const habit = await prisma.habit.findUnique({ where: { id: habitId } });
+
+  return logHabitProgress({
+    habitId,
+    value: willBeCompleted ? (habit?.targetValue || 1) : 0,
+    completed: willBeCompleted,
+    targetDateStr: dateStr,
+  });
+}
