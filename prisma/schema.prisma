@@ -1,0 +1,576 @@
+// LifeOS V1 Master Database Schema
+// SQLite + Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// --------------------------------------------------------
+// ENUMS
+// --------------------------------------------------------
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum EnergyLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum RecurrenceType {
+  NONE
+  DAILY
+  WEEKDAYS
+  WEEKENDS
+  SPECIFIC_DAYS
+  EVERY_X_DAYS
+  EVERY_X_WEEKS
+  EVERY_X_MONTHS
+  MONTHLY
+  YEARLY
+  CUSTOM
+}
+
+enum TaskStatus {
+  PENDING
+  COMPLETED
+  SKIPPED
+  CANCELLED
+}
+
+enum HabitType {
+  BINARY
+  NUMERIC
+  TIME_BASED
+  PERCENTAGE
+}
+
+enum HabitFrequency {
+  DAILY
+  WEEKLY
+  SPECIFIC_DAYS
+}
+
+enum ChallengeCategory {
+  DEEN
+  HEALTH
+  WEALTH
+  MIND
+  ADVENTURE
+  RELATIONSHIPS
+  KNOWLEDGE
+  CAREER
+}
+
+enum ChallengeStatus {
+  ACTIVE
+  COMPLETED
+  FAILED
+  ABANDONED
+}
+
+enum LearningCategory {
+  GERMAN
+  ARABIC
+  IT_CERTIFICATIONS
+  AWS
+  AZURE
+  PROGRAMMING
+  ISLAMIC_KNOWLEDGE
+  BOOKS
+  COURSES
+  OTHER
+}
+
+enum LearningStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  PAUSED
+}
+
+enum WorkType {
+  REMOTE
+  HYBRID
+  ONSITE
+}
+
+enum ApplicationStatus {
+  SAVED
+  APPLIED
+  INTERVIEW
+  OFFER
+  REJECTED
+  ACCEPTED
+}
+
+enum JournalType {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum ActivityType {
+  TASK_COMPLETED
+  HABIT_COMPLETED
+  CHALLENGE_ACCEPTED
+  CHALLENGE_PROGRESS
+  CHALLENGE_COMPLETED
+  LEARNING_SESSION
+  CAREER_APPLICATION
+  JOURNAL_CREATED
+  RECOVERY_ACTION
+  MILESTONE_REACHED
+}
+
+enum MissionStatus {
+  PLANNING
+  ACTIVE
+  COMPLETED
+  PAUSED
+}
+
+enum FuturePlanCategory {
+  MARRIAGE
+  RELOCATION
+  CAREER
+  EDUCATION
+  BUSINESS
+  FINANCIAL_INDEPENDENCE
+  OTHER
+}
+
+enum PlanStatus {
+  PLANNED
+  IN_PROGRESS
+  ACHIEVED
+  POSTPONED
+}
+
+// --------------------------------------------------------
+// CORE MODELS
+// --------------------------------------------------------
+
+model User {
+  id        String   @id @default(cuid())
+  name      String   @default("Administrator")
+  email     String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  settings           Settings?
+  tasks              Task[]
+  taskOccurrences    TaskOccurrence[]
+  habits             Habit[]
+  habitLogs          HabitLog[]
+  activeChallenges   ActiveChallenge[]
+  learningItems      LearningItem[]
+  learningSessions   LearningSession[]
+  careerApplications CareerApplication[]
+  journalEntries     JournalEntry[]
+  dailySummaries     DailySummary[]
+  weeklySummaries    WeeklySummary[]
+  monthlySummaries   MonthlySummary[]
+  activityLogs       ActivityLog[]
+  xpLogs             XPLog[]
+  achievements       Achievement[]
+  futurePlans        FuturePlan[]
+  missions           Mission[]
+  inboxItems         InboxItem[]
+}
+
+model Settings {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme            String   @default("dark")
+  accentColor      String   @default("#047857") // Dark Emerald (#047857)
+  territoryWeights String? // JSON string e.g. {"deen": 1.5, "health": 1.2}
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Territory {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  slug         String   @unique
+  description  String?
+  icon         String?
+  color        String   @default("#047857")
+  weight       Float    @default(1.0)
+  xp           Int      @default(0)
+  level        Int      @default(1)
+  weeklyScore  Float    @default(0.0)
+  monthlyScore Float    @default(0.0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tasks         Task[]
+  habits        Habit[]
+  challenges    Challenge[]
+  missions      Mission[]
+  learningItems LearningItem[]
+  activityLogs  ActivityLog[]
+  xpLogs        XPLog[]
+}
+
+model Task {
+  id                       String           @id @default(cuid())
+  title                    String
+  description              String?
+  userId                   String           @default("default-user-id")
+  user                     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  territoryId              String?
+  territory                Territory?       @relation(fields: [territoryId], references: [id], onDelete: SetNull)
+  missionId                String?
+  mission                  Mission?         @relation(fields: [missionId], references: [id], onDelete: SetNull)
+  activeChallengeId        String?
+  activeChallenge          ActiveChallenge? @relation(fields: [activeChallengeId], references: [id], onDelete: SetNull)
+  priority                 Priority         @default(MEDIUM)
+  energyRequired           EnergyLevel      @default(MEDIUM)
+  estimatedDurationMinutes Int?
+  recurrenceType           RecurrenceType   @default(NONE)
+  recurrenceRule           String? // e.g. "1,3,5" or interval string
+  startTime                String? // e.g., "09:00"
+  endTime                  String? // e.g., "10:00"
+  isArchived               Boolean          @default(false)
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+
+  occurrences TaskOccurrence[]
+}
+
+model TaskOccurrence {
+  id                    String     @id @default(cuid())
+  taskId                String
+  task                  Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId                String     @default("default-user-id")
+  user                  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scheduledDate         DateTime
+  status                TaskStatus @default(PENDING)
+  completedAt           DateTime?
+  actualDurationMinutes Int?
+  xpEarned              Int        @default(0)
+  notes                 String?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+
+  @@index([scheduledDate])
+  @@index([taskId, scheduledDate])
+}
+
+model Habit {
+  id                String           @id @default(cuid())
+  title             String
+  description       String?
+  userId            String           @default("default-user-id")
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  territoryId       String
+  territory         Territory        @relation(fields: [territoryId], references: [id], onDelete: Cascade)
+  activeChallengeId String?
+  activeChallenge   ActiveChallenge? @relation(fields: [activeChallengeId], references: [id], onDelete: SetNull)
+  type              HabitType        @default(BINARY)
+  targetValue       Float            @default(1.0)
+  unit              String? // e.g., "minutes", "pages", "steps", "L"
+  frequency         HabitFrequency   @default(DAILY)
+  targetDays        String? // e.g., "1,2,3,4,5,6,7"
+  currentStreak     Int              @default(0)
+  longestStreak     Int              @default(0)
+  momentum          Float            @default(100.0)
+  totalCompletions  Int              @default(0)
+  isArchived        Boolean          @default(false)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  logs HabitLog[]
+}
+
+model HabitLog {
+  id        String   @id @default(cuid())
+  habitId   String
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  userId    String   @default("default-user-id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime // Normalized midnight date
+  completed Boolean  @default(false)
+  value     Float    @default(0.0)
+  xpEarned  Int      @default(0)
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([habitId, date])
+  @@index([date])
+}
+
+model Challenge {
+  id           String            @id @default(cuid())
+  title        String
+  description  String
+  territoryId  String
+  territory    Territory         @relation(fields: [territoryId], references: [id], onDelete: Cascade)
+  category     ChallengeCategory @default(DEEN)
+  durationDays Int               @default(30)
+  targetType   HabitType         @default(BINARY)
+  targetValue  Float             @default(1.0)
+  unit         String?
+  rewardXp     Int               @default(100)
+  isSystem     Boolean           @default(true)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  activeInstances ActiveChallenge[]
+}
+
+model ActiveChallenge {
+  id              String          @id @default(cuid())
+  challengeId     String
+  challenge       Challenge       @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  userId          String          @default("default-user-id")
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startDate       DateTime        @default(now())
+  endDate         DateTime?
+  status          ChallengeStatus @default(ACTIVE)
+  currentValue    Float           @default(0.0)
+  progressPercent Float           @default(0.0)
+  completedAt     DateTime?
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  tasks  Task[]
+  habits Habit[]
+}
+
+model LearningItem {
+  id               String           @id @default(cuid())
+  title            String
+  category         LearningCategory @default(OTHER)
+  userId           String           @default("default-user-id")
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  territoryId      String
+  territory        Territory        @relation(fields: [territoryId], references: [id], onDelete: Cascade)
+  progressPercent  Float            @default(0.0)
+  timeSpentMinutes Int              @default(0)
+  lessonsCompleted Int              @default(0)
+  totalLessons     Int?
+  vocabLearned     Int              @default(0)
+  targetVocab      Int?
+  targetDate       DateTime?
+  status           LearningStatus   @default(IN_PROGRESS)
+  notes            String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  sessions LearningSession[]
+}
+
+model LearningSession {
+  id              String       @id @default(cuid())
+  learningItemId  String
+  learningItem    LearningItem @relation(fields: [learningItemId], references: [id], onDelete: Cascade)
+  userId          String       @default("default-user-id")
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date            DateTime     @default(now())
+  durationMinutes Int
+  itemsLearned    Int          @default(0)
+  notes           String?
+  xpEarned        Int          @default(0)
+  createdAt       DateTime     @default(now())
+}
+
+model CareerApplication {
+  id              String            @id @default(cuid())
+  company         String
+  position        String
+  country         String // Austria, Germany, Italy, Spain, Poland, Netherlands, Ireland, etc.
+  location        String?
+  workType        WorkType          @default(HYBRID)
+  status          ApplicationStatus @default(SAVED)
+  appliedDate     DateTime?
+  salary          String?
+  visaSponsorship Boolean           @default(false)
+  followUpDate    DateTime?
+  jobUrl          String?
+  notes           String?
+  userId          String            @default("default-user-id")
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+model JournalEntry {
+  id             String      @id @default(cuid())
+  userId         String      @default("default-user-id")
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date           DateTime
+  type           JournalType @default(DAILY)
+  whatWentWell   String?
+  whatToImprove  String?
+  gratitude      String?
+  distractions   String?
+  whatILearned   String?
+  closerToAllah  String?
+  energyDrainers String?
+  energyGivers   String?
+  smallWin       String?
+  tomorrowAction String?
+  moodScore      Int?        @default(5)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@unique([userId, date, type])
+  @@index([date])
+}
+
+model DailySummary {
+  id                       String   @id @default(cuid())
+  userId                   String   @default("default-user-id")
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date                     DateTime @unique
+  betterThanYesterdayScore Float    @default(0.0)
+  focusedTimeMinutes       Int      @default(0)
+  deepWorkMinutes          Int      @default(0)
+  wastedTimeMinutes        Int      @default(0)
+  productivePercent        Float    @default(0.0)
+  plannedTimeMinutes       Int      @default(0)
+  completedTimeMinutes     Int      @default(0)
+  habitsCompleted          Int      @default(0)
+  totalHabits              Int      @default(0)
+  tasksCompleted           Int      @default(0)
+  totalXpEarned            Int      @default(0)
+  momentumScore            Float    @default(100.0)
+  notes                    String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+}
+
+model WeeklySummary {
+  id                   String   @id @default(cuid())
+  userId               String   @default("default-user-id")
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startDate            DateTime
+  endDate              DateTime
+  averageBetterScore   Float    @default(0.0)
+  totalDeepWorkMinutes Int      @default(0)
+  habitCompletionRate  Float    @default(0.0)
+  totalXpEarned        Int      @default(0)
+  notes                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([userId, startDate])
+}
+
+model MonthlySummary {
+  id                   String   @id @default(cuid())
+  userId               String   @default("default-user-id")
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  year                 Int
+  month                Int
+  averageBetterScore   Float    @default(0.0)
+  totalDeepWorkMinutes Int      @default(0)
+  habitCompletionRate  Float    @default(0.0)
+  totalXpEarned        Int      @default(0)
+  notes                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([userId, year, month])
+}
+
+model ActivityLog {
+  id          String       @id @default(cuid())
+  userId      String       @default("default-user-id")
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timestamp   DateTime     @default(now())
+  type        ActivityType
+  description String
+  territoryId String?
+  territory   Territory?   @relation(fields: [territoryId], references: [id], onDelete: SetNull)
+  xpEarned    Int          @default(0)
+  metadata    String? // JSON string for details
+  createdAt   DateTime     @default(now())
+
+  @@index([timestamp])
+}
+
+model XPLog {
+  id          String     @id @default(cuid())
+  userId      String     @default("default-user-id")
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount      Int
+  reason      String
+  source      String // task, habit, challenge, learning, etc.
+  territoryId String?
+  territory   Territory? @relation(fields: [territoryId], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now())
+}
+
+model Achievement {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  title       String
+  description String
+  icon        String?
+  isUnlocked  Boolean   @default(false)
+  unlockedAt  DateTime?
+  userId      String    @default("default-user-id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+}
+
+model Mission {
+  id               String        @id @default(cuid())
+  title            String
+  description      String?
+  userId           String        @default("default-user-id")
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  territoryId      String?
+  territory        Territory?    @relation(fields: [territoryId], references: [id], onDelete: SetNull)
+  priority         Priority      @default(HIGH)
+  status           MissionStatus @default(ACTIVE)
+  progressPercent  Float         @default(0.0)
+  startDate        DateTime?
+  targetDate       DateTime?
+  isCurrentMission Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  tasks Task[]
+}
+
+model FuturePlan {
+  id         String             @id @default(cuid())
+  title      String
+  category   FuturePlanCategory @default(OTHER)
+  targetDate DateTime?
+  status     PlanStatus         @default(PLANNED)
+  notes      String?
+  userId     String             @default("default-user-id")
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+}
+
+model InboxItem {
+  id              String   @id @default(cuid())
+  content         String
+  processed       Boolean  @default(false)
+  convertedToType String?
+  convertedId     String?
+  userId          String   @default("default-user-id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+}
