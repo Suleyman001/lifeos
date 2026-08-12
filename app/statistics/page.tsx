@@ -1,36 +1,28 @@
-import PlaceholderModule from "@/components/shell/PlaceholderModule";
-import { BarChart3, TrendingUp, Zap } from "lucide-react";
+import Sidebar from "@/components/shell/Sidebar";
+import Header from "@/components/shell/Header";
+import StatisticsDashboard from "@/components/statistics/StatisticsDashboard";
+import { getStatisticsData } from "@/lib/actions/statistics";
 
 export default async function StatisticsPage() {
-  return (
-    <PlaceholderModule
-      title="Statistics & Heatmaps"
-      subtitle="Deep work, habit consistency, territory growth & GitHub-style contribution heatmap."
-      icon={BarChart3}
-    >
-      <div className="glass-panel rounded-2xl p-6 border border-slate-800 space-y-4">
-        <h4 className="text-sm font-bold text-white">GitHub-Style Contribution Heatmap</h4>
-        <p className="text-xs text-slate-400">
-          Visualizing your daily momentum and habit consistency over 365 days.
-        </p>
+  const { dailySummaries, habitLogs, territories, habits } = await getStatisticsData();
 
-        <div className="grid grid-cols-26 gap-1 pt-4 overflow-x-auto">
-          {Array.from({ length: 154 }).map((_, i) => (
-            <div
-              key={i}
-              className={`w-3 h-3 rounded-sm ${
-                i % 7 === 0
-                  ? "bg-[#047857]"
-                  : i % 5 === 0
-                  ? "bg-[#059669]"
-                  : i % 3 === 0
-                  ? "bg-[#10b981]"
-                  : "bg-slate-900 border border-slate-800"
-              }`}
-            />
-          ))}
-        </div>
+  return (
+    <div className="min-h-screen bg-[#070a11] text-slate-100 flex">
+      <Sidebar />
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header
+          title="Statistics & Analytics"
+          subtitle="52-week contribution heatmap, territory XP, habit consistency, and daily trend charts."
+        />
+        <main className="p-8 max-w-7xl mx-auto w-full space-y-6">
+          <StatisticsDashboard
+            dailySummaries={dailySummaries as any}
+            habitLogs={habitLogs as any}
+            territories={territories}
+            habits={habits as any}
+          />
+        </main>
       </div>
-    </PlaceholderModule>
+    </div>
   );
 }

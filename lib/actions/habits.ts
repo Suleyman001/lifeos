@@ -160,3 +160,25 @@ export async function toggleHabitLog(habitId: string, targetDateStr?: string) {
     targetDateStr: dateStr,
   });
 }
+
+export async function deleteHabit(id: string) {
+  await prisma.habitLog.deleteMany({ where: { habitId: id } });
+  await prisma.habit.delete({ where: { id } });
+  revalidatePath("/habits");
+  revalidatePath("/");
+  return { success: true };
+}
+
+export async function updateHabit(id: string, data: {
+  title?: string;
+  description?: string;
+  targetValue?: number;
+  unit?: string;
+  territoryId?: string;
+  isArchived?: boolean;
+}) {
+  await prisma.habit.update({ where: { id }, data });
+  revalidatePath("/habits");
+  revalidatePath("/");
+  return { success: true };
+}

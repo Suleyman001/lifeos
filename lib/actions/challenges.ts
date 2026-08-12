@@ -124,3 +124,20 @@ export async function updateChallengeProgress(activeId: string, incrementValue: 
   revalidatePath("/");
   return { success: true, completed: isCompleted };
 }
+
+export async function abandonChallenge(activeId: string) {
+  await prisma.activeChallenge.update({
+    where: { id: activeId },
+    data: { status: "ABANDONED" },
+  });
+  revalidatePath("/challenges");
+  revalidatePath("/");
+  return { success: true };
+}
+
+export async function deleteActiveChallenge(activeId: string) {
+  await prisma.activeChallenge.delete({ where: { id: activeId } });
+  revalidatePath("/challenges");
+  revalidatePath("/");
+  return { success: true };
+}

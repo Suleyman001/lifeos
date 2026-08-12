@@ -1,24 +1,23 @@
-import PlaceholderModule from "@/components/shell/PlaceholderModule";
-import { Compass, Calendar } from "lucide-react";
+import Sidebar from "@/components/shell/Sidebar";
+import Header from "@/components/shell/Header";
+import FuturePlansBoard from "@/components/future-plans/FuturePlansBoard";
+import { getFuturePlans } from "@/lib/actions/future-plans";
 
 export default async function FuturePlansPage() {
-  const categories = ["Marriage", "Relocation", "Career", "Education", "Business", "Financial Independence"];
+  const plans = await getFuturePlans();
 
   return (
-    <PlaceholderModule
-      title="Future Plans Roadmap"
-      subtitle="Long-term life direction, milestones, target dates, and high-level goals."
-      icon={Compass}
-    >
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {categories.map((cat) => (
-          <div key={cat} className="glass-panel rounded-2xl p-5 border border-slate-800 space-y-2">
-            <span className="text-[10px] font-mono font-bold uppercase text-emerald-400">Roadmap Pillar</span>
-            <h4 className="text-sm font-bold text-white">{cat}</h4>
-            <p className="text-xs text-slate-400">Target milestones and high-level preparation notes.</p>
-          </div>
-        ))}
+    <div className="min-h-screen bg-[#070a11] text-slate-100 flex">
+      <Sidebar />
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header
+          title="Future Plans Roadmap"
+          subtitle="Long-term life direction: Marriage, Relocation, Career, Education, Business & Financial Independence."
+        />
+        <main className="p-8 max-w-7xl mx-auto w-full space-y-6">
+          <FuturePlansBoard plans={plans as any} />
+        </main>
       </div>
-    </PlaceholderModule>
+    </div>
   );
 }

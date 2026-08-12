@@ -73,3 +73,33 @@ export async function updateApplicationStatus(id: string, newStatus: "SAVED" | "
   revalidatePath("/");
   return { success: true };
 }
+
+export async function updateApplication(id: string, data: {
+  company?: string;
+  position?: string;
+  country?: string;
+  location?: string;
+  workType?: "REMOTE" | "HYBRID" | "ONSITE";
+  salary?: string;
+  visaSponsorship?: boolean;
+  notes?: string;
+  followUpDate?: string;
+}) {
+  await prisma.careerApplication.update({
+    where: { id },
+    data: {
+      ...data,
+      followUpDate: data.followUpDate ? new Date(data.followUpDate) : undefined,
+    },
+  });
+  revalidatePath("/career");
+  revalidatePath("/");
+  return { success: true };
+}
+
+export async function deleteApplication(id: string) {
+  await prisma.careerApplication.delete({ where: { id } });
+  revalidatePath("/career");
+  revalidatePath("/");
+  return { success: true };
+}
